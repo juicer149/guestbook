@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "Skriv i gästboken" %} · Törspärs{% endblock %}
+{% block body_class %}app-page{% endblock %}
+
+{% block content %}
+<main class="write-page">
+    <section class="write-card">
+        <header class="write-card__top">
+            <a class="button button--outline button--small write-card__back" href="{% url 'guestbook:index' %}">
+                {% include "includes/icons/book-open.html" with icon_class="icon icon--sm" %}
+
+                {% trans "Gästboken" %}
+            </a>
+
+            <a class="button button--outline button--small write-card__home" href="{% url 'pages:home' %}" aria-label="{% trans 'Till startsidan' %}">
+                {% include "includes/icons/home.html" with icon_class="icon icon--sm" %}
+                <span>{% trans "Hem" %}</span>
+            </a>
+        </header>
+
+        <section class="write-card__hero" aria-labelledby="write-title">
+            {% include "includes/icons/pen.html" with icon_class="icon icon--lg write-card__icon" %}
+
+            <h1 id="write-title" class="write-card__title">
+                {% trans "Skriv i gästboken" %}
+            </h1>
+
+            {% if user.is_authenticated and user.profile %}
+                <p class="write-card__byline">
+                    {{ user.profile.display_name }}
+                    {% if user.profile.family %}
+                        · {{ user.profile.family.name }}
+                    {% endif %}
+                </p>
+            {% else %}
+                <p class="write-card__byline">
+                    {% trans "Du kan skriva utan konto." %}
+                </p>
+            {% endif %}
+
+            <div class="write-card__divider"></div>
+        </section>
+
+        <form method="post" enctype="multipart/form-data" class="write-form">
+            {% csrf_token %}
+
+            {% if form.non_field_errors %}
+                <div class="write-form__errors">
+                    {{ form.non_field_errors }}
+                </div>
+            {% endif %}
+
+            {% if form.guest_name %}
+                <div class="write-form__field">
+                    <label for="{{ form.guest_name.id_for_label }}">
+                        {{ form.guest_name.label }}
+                    </label>
+                    {{ form.guest_name }}
+                    {{ form.guest_name.errors }}
+                </div>
+            {% endif %}
+
+            <div class="write-form__field">
+                <label for="{{ form.title.id_for_label }}">
+                    {{ form.title.label }}
+                </label>
+                {{ form.title }}
+                {{ form.title.errors }}
+            </div>
+
+            <div class="write-form__field">
+                <label for="{{ form.content.id_for_label }}">
+                    {{ form.content.label }}
+                </label>
+                {{ form.content }}
+                {{ form.content.errors }}
+            </div>
+
+            {% if form.stay_length_days %}
+                <div class="write-form__field">
+                    <label for="{{ form.stay_length_days.id_for_label }}">
+                        {{ form.stay_length_days.label }}
+                    </label>
+                    {{ form.stay_length_days }}
+                    <p class="write-form__help">
+                        {% trans "Välj hur många dagar bakåt från idag som besöket gäller." %}
+                    </p>
+                    {{ form.stay_length_days.errors }}
+                </div>
+            {% endif %}
+
+            {% if form.start_date %}
+                <div class="write-form__date-grid">
+                    <div class="write-form__field">
+                        <label for="{{ form.start_date.id_for_label }}">
+                            {{ form.start_date.label }}
+                        </label>
+                        {{ form.start_date }}
+                        {{ form.start_date.errors }}
+                    </div>
+
+                    <div class="write-form__field">
+                        <label for="{{ form.end_date.id_for_label }}">
+                            {{ form.end_date.label }}
+                        </label>
+                        {{ form.end_date }}
+                        {{ form.end_date.errors }}
+                    </div>
+                </div>
+            {% endif %}
+
+            {% if form.visibility %}
+                <fieldset class="write-form__field write-form__visibility">
+                    <legend>
+                        {{ form.visibility.label }}
+                    </legend>
+
+                    <div class="choice-pills">
+                        {% for radio in form.visibility %}
+                            <label class="choice-pill" for="{{ radio.id_for_label }}">
+                                {{ radio.tag }}
+                                <span class="choice-pill__label">
+                                    {{ radio.choice_label }}
+                                </span>
+                            </label>
+                        {% endfor %}
+                    </div>
+
+                    {{ form.visibility.errors }}
+                </fieldset>
+            {% endif %}
+
+            <div class="write-form__field">
+                <label for="{{ form.images.id_for_label }}">
+                    {{ form.images.label }}
+                </label>
+
+                <label class="write-form__file">
+                    {% include "includes/icons/image.html" with icon_class="icon icon--md" %}
+
+                    <span>{% trans "Lägg till bilder" %}</span>
+                    {{ form.images }}
+                </label>
+
+                <p class="write-form__help">
+                    {% trans "Du kan välja flera bilder samtidigt." %}
+                </p>
+
+                {{ form.images.errors }}
+            </div>
+
+            <button class="button button--primary write-form__submit" type="submit">
+                {% trans "Spara inlägg" %}
+            </button>
+        </form>
+    </section>
+</main>
+{% endblock %}

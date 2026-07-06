@@ -1,0 +1,285 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "Gästboken" %} · Törspärs{% endblock %}
+{% block body_class %}app-page{% endblock %}
+
+{% block content %}
+<main class="book-page">
+    <header class="book-header">
+        <a class="button button--outline button--small" href="{% url 'pages:home' %}">
+            {% include "includes/icons/home.html" with icon_class="icon icon--sm" %}
+            Törspärs
+        </a>
+
+        <a class="button button--outline button--small" href="{% url 'guestbook:create' %}">
+            {% include "includes/icons/pen.html" with icon_class="icon icon--sm" %}
+            {% trans "Skriv nytt" %}
+        </a>
+    </header>
+
+    <section class="book-hero" aria-labelledby="book-hero-title">
+        <div class="book-hero__sign">
+            <p class="book-hero__kicker">
+                {% trans "Gästbok" %}
+            </p>
+
+            <h1 id="book-hero-title" class="book-hero__title">
+                {% trans "Hälsningar från Törspärs" %}
+            </h1>
+        </div>
+
+        <div class="book-hero__archive">
+            <p class="book-hero__text">
+                {% trans "Bläddra bland hälsningar, bilder och minnen från besök på gården." %}
+            </p>
+
+            <form class="book-hero__filters" method="get">
+                <div class="book-hero__field">
+                    <label for="guestbook-search">
+                        {% trans "Sök" %}
+                    </label>
+
+                    <input
+                        id="guestbook-search"
+                        type="search"
+                        name="q"
+                        value="{{ query }}"
+                        placeholder="{% trans 'Namn, rubrik eller text...' %}"
+                    >
+                </div>
+
+                <div class="book-hero__field book-hero__field--date">
+                    <label for="guestbook-date">
+                        {% trans "Datum" %}
+                    </label>
+
+                    <input
+                        id="guestbook-date"
+                        type="date"
+                        name="date"
+                        value="{{ date_value }}"
+                    >
+                </div>
+
+                <button class="button button--primary book-hero__submit" type="submit">
+                    {% trans "Sök" %}
+                </button>
+            </form>
+
+            {% if has_filters %}
+                <a class="book-hero__clear" href="{% url 'guestbook:index' %}">
+                    {% trans "Visa alla inlägg" %}
+                </a>
+            {% endif %}
+        </div>
+    </section>
+
+    <section class="entry-list" aria-label="{% trans 'Gästboksinlägg' %}">
+        {% for entry in entries %}
+            <article class="entry-card">
+                <div class="entry-card__timeline">
+                    <time
+                        class="entry-card__date"
+                        datetime="{{ entry.start_date|date:'Y-m-d' }}"
+                    >
+                        <span class="entry-card__date-day">
+                            {{ entry.start_date|date:"d" }}
+                        </span>
+                        <span class="entry-card__date-month">
+                            {{ entry.start_date|date:"M" }}
+                        </span>
+                        <span class="entry-card__date-year">
+                            {{ entry.start_date|date:"Y" }}
+                        </span>
+                    </time>
+
+                    {% if not entry.is_single_day %}
+                        <div class="entry-card__range" aria-hidden="true">
+                            <span class="entry-card__range-line"></span>
+                            <span class="entry-card__range-label">
+                                {% trans "till" %}
+                            </span>
+                            <span class="entry-card__range-line"></span>
+                        </div>
+
+                        <time
+                            class="entry-card__end-date"
+                            datetime="{{ entry.end_date|date:'Y-m-d' }}"
+                        >
+                            <span class="entry-card__end-date-day">
+                                {{ entry.end_date|date:"d" }}
+                            </span>
+                            <span class="entry-card__end-date-month">
+                                {{ entry.end_date|date:"M" }}
+                            </span>
+                            <span class="entry-card__end-date-year">
+                                {{ entry.end_date|date:"Y" }}
+                            </span>
+                        </time>
+                    {% endif %}
+
+                    <div class="entry-card__line" aria-hidden="true"></div>
+                </div>
+
+                <div class="entry-card__body">
+                    <div class="entry-card__main">
+                        <div class="entry-card__meta">
+                            {% if entry.family %}
+                                <p class="entry-card__family">
+                                    {{ entry.family.name }}
+                                </p>
+                            {% endif %}
+
+                            {% if entry.visibility == "members" %}
+                                <p class="entry-card__visibility">
+                                    {% trans "Bara inloggade" %}
+                                </p>
+                            {% endif %}
+                        </div>
+
+                        <h2 class="entry-card__title">
+                            {{ entry.title }}
+                        </h2>
+
+                        {% with images=entry.images.all %}
+                            {% if images %}
+                                <figure class="entry-card__image">
+                                    <button
+                                        class="entry-card__image-button"
+                                        type="button"
+                                        data-gallery-trigger
+                                        data-gallery-id="entry-gallery-{{ entry.id }}"
+                                        aria-label="{% trans 'Visa bilder' %}"
+                                    >
+                                        <img
+                                            src="{{ images.0.image.url }}"
+                                            alt="{{ images.0.caption|default:entry.title }}"
+                                        >
+                                    </button>
+                                </figure>
+
+                                <div
+                                    id="entry-gallery-{{ entry.id }}"
+                                    class="entry-card__gallery"
+                                    hidden
+                                >
+                                    {% for image in images %}
+                                        <a
+                                            href="{{ image.image.url }}"
+                                            data-caption="{{ image.caption }}"
+                                            data-alt="{{ image.caption|default:entry.title }}"
+                                        >
+                                            {{ image.caption|default:entry.title }}
+                                        </a>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        {% endwith %}
+
+                        {% if entry.content %}
+                            <div class="entry-card__content">
+                                {{ entry.content|linebreaks }}
+                            </div>
+                        {% endif %}
+
+                        {% if entry.display_author %}
+                            <p class="entry-card__author">
+                                {% trans "Skrivet av" %} {{ entry.display_author }}
+                            </p>
+                        {% endif %}
+                    </div>
+
+                    {% with images=entry.images.all %}
+                        {% if images %}
+                            <footer class="entry-card__footer">
+                                <button
+                                    class="entry-card__photos"
+                                    type="button"
+                                    data-gallery-trigger
+                                    data-gallery-id="entry-gallery-{{ entry.id }}"
+                                >
+                                    {% include "includes/icons/image.html" with icon_class="icon icon--sm" %}
+
+                                    <span>
+                                        {% blocktrans count image_count=images|length %}
+                                            {{ image_count }} bild
+                                        {% plural %}
+                                            {{ image_count }} bilder
+                                        {% endblocktrans %}
+                                    </span>
+                                </button>
+                            </footer>
+                        {% endif %}
+                    {% endwith %}
+                </div>
+            </article>
+        {% empty %}
+            <article class="empty-card">
+                <h2>{% trans "Inga hälsningar ännu" %}</h2>
+
+                <p>
+                    {% trans "Bli först med att skriva något i gästboken." %}
+                </p>
+
+                <a class="button button--primary" href="{% url 'guestbook:create' %}">
+                    {% trans "Skriv första inlägget" %}
+                </a>
+            </article>
+        {% endfor %}
+    </section>
+</main>
+
+<div
+    class="gallery-lightbox"
+    data-gallery-lightbox
+    hidden
+    aria-hidden="true"
+>
+    <div class="gallery-lightbox__backdrop" data-gallery-close></div>
+
+    <section
+        class="gallery-lightbox__dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-label="{% trans 'Bildvisning' %}"
+    >
+        <button
+            class="gallery-lightbox__close"
+            type="button"
+            data-gallery-close
+            aria-label="{% trans 'Stäng bildvisning' %}"
+        >
+            ×
+        </button>
+
+        <button
+            class="gallery-lightbox__nav gallery-lightbox__nav--prev"
+            type="button"
+            data-gallery-prev
+            aria-label="{% trans 'Föregående bild' %}"
+        >
+        <span aria-hidden="true">‹</span>
+        </button>
+
+        <figure class="gallery-lightbox__figure">
+            <img class="gallery-lightbox__image" src="" alt="">
+            <figcaption
+                class="gallery-lightbox__caption"
+                data-gallery-caption
+            ></figcaption>
+        </figure>
+
+        <button
+            class="gallery-lightbox__nav gallery-lightbox__nav--next"
+            type="button"
+            data-gallery-next
+            aria-label="{% trans 'Nästa bild' %}"
+        >
+        <span aria-hidden="true">›</span>
+        </button>
+
+        <p class="gallery-lightbox__count" data-gallery-count></p>
+    </section>
+</div>
+{% endblock %}

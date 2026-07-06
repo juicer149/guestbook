@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% load i18n static %}
+
+{% block title %}{% trans "Gästbok" %} · Törspärs{% endblock %}
+{% block body_class %}home-page{% endblock %}
+
+{% block content %}
+<section class="home-wall" aria-labelledby="home-title">
+    <div class="home-wall__panel">
+        <div class="home-wall__content">
+            <div class="home-wall__text">
+                <p class="home-wall__kicker">{% trans "Gästbok" %}</p>
+                <h1 id="home-title" class="home-wall__title">Törspärs</h1>
+            </div>
+
+            <div class="home-wall__actions">
+                <a class="button button--wall" href="{% url 'guestbook:index' %}">
+                    {% include "includes/icons/book-open.html" with icon_class="icon icon--button" %}
+                    <span>{% trans "Se Gästboken" %}</span>
+                </a>
+
+                <a class="button button--wall" href="{% url 'guestbook:create' %}">
+                    {% include "includes/icons/pen.html" with icon_class="icon icon--button" %}
+                    <span>{% trans "Skriv något nytt" %}</span>
+                </a>
+            </div>
+        </div>
+
+        <div class="home-wall__account">
+            {% if user.is_authenticated %}
+                <span>{% trans "Inloggad som" %} {{ user.get_username }}</span>
+
+                <form method="post" action="{% url 'logout' %}">
+                    {% csrf_token %}
+                    <button type="submit">{% trans "Logga ut" %}</button>
+                </form>
+            {% else %}
+                <a href="{% url 'login' %}">{% trans "Logga in" %}</a>
+            {% endif %}
+        </div>
+    </div>
+</section>
+{% endblock %}
+

@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}{{ family.name }} · Törspärs{% endblock %}
+{% block body_class %}app-page{% endblock %}
+
+{% block content %}
+<main class="book-page">
+    <header class="book-header">
+        <a class="book-header__home" href="{% url 'guestbook:index' %}">
+            ← {% trans "Gästboken" %}
+        </a>
+
+        <a class="book-header__action" href="{% url 'guestbook:create' %}">
+            {% trans "Skriv nytt" %}
+        </a>
+    </header>
+
+    <section class="book-hero book-hero--compact" aria-labelledby="family-title">
+        <p class="book-hero__kicker">{% trans "Familj" %}</p>
+
+        <h1 id="family-title" class="book-hero__title">
+            {{ family.name }}
+        </h1>
+
+        {% if family.parent %}
+            <p class="book-hero__note">
+                {% trans "Del av" %}: {{ family.parent.name }}
+            </p>
+        {% endif %}
+    </section>
+
+    <section class="entry-list" aria-label="{% trans 'Gästboksinlägg för familjen' %}">
+        {% for entry in entries %}
+            <article class="entry-card">
+                <header class="entry-card__header">
+                    <p class="entry-card__meta">
+                        <time datetime="{{ entry.visit_date|date:'Y-m-d' }}">
+                            {{ entry.visit_date }}
+                        </time>
+
+                        {% if entry.visibility == "members" %}
+                            <span>·</span>
+                            <span>{% trans "Bara för inloggade" %}</span>
+                        {% endif %}
+                    </p>
+
+                    <h2 class="entry-card__title">{{ entry.title }}</h2>
+
+                    {% if entry.display_author %}
+                        <p class="entry-card__author">
+                            {% trans "Skrivet av" %} {{ entry.display_author }}
+                        </p>
+                    {% endif %}
+                </header>
+
+                {% if entry.content %}
+                    <div class="entry-card__content">
+                        {{ entry.content|linebreaks }}
+                    </div>
+                {% endif %}
+
+                {% if entry.images.all %}
+                    <div class="entry-card__images">
+                        {% for image in entry.images.all %}
+                            <figure class="entry-card__figure">
+                                <img src="{{ image.image.url }}" alt="{{ image.caption }}">
+                                {% if image.caption %}
+                                    <figcaption>{{ image.caption }}</figcaption>
+                                {% endif %}
+                            </figure>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </article>
+        {% empty %}
+            <article class="empty-card">
+                <h2>{% trans "Inga hälsningar ännu" %}</h2>
+
+                <p>
+                    {% trans "Det finns inga inlägg för denna familj ännu." %}
+                </p>
+
+                <a class="button button--primary" href="{% url 'guestbook:create' %}">
+                    {% trans "Skriv första inlägget" %}
+                </a>
+            </article>
+        {% endfor %}
+    </section>
+</main>
+{% endblock %}

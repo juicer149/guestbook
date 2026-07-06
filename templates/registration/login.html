@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "Logga in" %} · Törspärs{% endblock %}
+{% block body_class %}app-page{% endblock %}
+
+{% block content %}
+<main class="page-shell">
+    <section class="page-container page-container--sm paper-card">
+        <section class="write-card__hero" aria-labelledby="login-title">
+            {% include "includes/icons/home.html" with icon_class="icon icon--lg write-card__icon" %}
+
+            <h1 id="login-title" class="write-card__title">
+                {% trans "Logga in" %}
+            </h1>
+
+            <p class="write-card__byline">
+                {% trans "Logga in för att skriva i gästboken." %}
+            </p>
+
+            <div class="write-card__divider"></div>
+        </section>
+
+        <form method="post" class="write-form">
+            {% csrf_token %}
+
+            {% if form.non_field_errors %}
+                <div class="write-form__errors">
+                    {{ form.non_field_errors }}
+                </div>
+            {% endif %}
+
+            <div class="write-form__field">
+                <label for="{{ form.username.id_for_label }}">
+                    {{ form.username.label }}
+                </label>
+                {{ form.username }}
+                {{ form.username.errors }}
+            </div>
+
+            <div class="write-form__field">
+                <label for="{{ form.password.id_for_label }}">
+                    {{ form.password.label }}
+                </label>
+                {{ form.password }}
+                {{ form.password.errors }}
+            </div>
+
+            <button class="button button--primary write-form__submit" type="submit">
+                {% trans "Logga in" %}
+            </button>
+        </form>
+    </section>
+</main>
+{% endblock %}
