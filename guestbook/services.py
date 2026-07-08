@@ -34,10 +34,11 @@ def create_entry(
         visibility=visibility,
     )
 
-    for image in images:
+    for position, image in enumerate(images):
         EntryImage.objects.create(
             entry=entry,
             image=image,
+            position=position,
         )
 
     return entry

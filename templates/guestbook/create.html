@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load i18n %}
+{% load i18n static %}
 
 {% block title %}{% trans "Skriv i gästboken" %} · Törspärs{% endblock %}
 {% block body_class %}app-page{% endblock %}
@@ -152,9 +152,23 @@
                     {{ form.images }}
                 </label>
 
-                <p class="write-form__help">
+                <p
+                    class="write-form__help"
+                    data-image-upload-status
+                    data-empty-label="{% trans 'Du kan välja flera bilder samtidigt.' %}"
+                    data-single-label="{% trans '1 bild vald.' %}"
+                    data-multiple-label="{% trans 'bilder valda.' %}"
+                    data-dublicate-label="{% trans 'Bilden är redan tillagd.' %}"
+                    data-dublicates-label="{% trans 'Bilderna är redan tillagda.' %}"
+                >
                     {% trans "Du kan välja flera bilder samtidigt." %}
                 </p>
+
+                <div
+                    class="write-form__image-preview"
+                    data-image-preview
+                    aria-live="polite"
+                ></div>
 
                 {{ form.images.errors }}
             </div>
@@ -165,4 +179,8 @@
         </form>
     </section>
 </main>
+{% endblock %}
+
+{% block extra_js %}
+    <script src="{% static 'js/image-preview.js' %}" defer></script>
 {% endblock %}

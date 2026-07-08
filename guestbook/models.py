@@ -97,11 +97,17 @@ class EntryImage(models.Model):
     image = models.ImageField(_("image"), upload_to="guestbook/")
     caption = models.CharField(_("caption"), max_length=160, blank=True)
 
+    position = models.PositiveIntegerField(
+        _("position"),
+        default=0,
+    )
+
     uploaded_at = models.DateTimeField(_("uploaded at"), auto_now_add=True)
 
     class Meta:
         verbose_name = _("entry image")
         verbose_name_plural = _("entry images")
+        ordering = ["position", "id"]
 
     def __str__(self) -> str:
         return self.caption or self.image.name
