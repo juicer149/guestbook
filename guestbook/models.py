@@ -32,6 +32,15 @@ class Entry(models.Model):
         related_name="entries",
     )
 
+    event = models.ForeignKey(
+        "guestbook.Event",
+        verbose_name=_("event"),
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="entries",
+    )
+
     title = models.CharField(_("title"), max_length=160)
     content = models.TextField(_("content"), blank=True)
 

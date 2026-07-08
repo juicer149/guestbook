@@ -34,38 +34,113 @@
                 {% trans "Bläddra bland hälsningar, bilder och minnen från besök på gården." %}
             </p>
 
-            <form class="book-hero__filters" method="get">
-                <div class="book-hero__field">
-                    <label for="guestbook-search">
+            {% if event %}
+                <p class="book-hero__active-filter">
+                    {% trans "Visar inlägg från" %}
+                    <strong>{{ event.name }}</strong>
+                </p>
+            {% endif %}
+
+            <details class="book-hero__filter-panel" {% if has_filters %}open{% endif %}>
+                <summary class="book-hero__filter-summary">
+                    {% trans "Sök och filtrera" %}
+                </summary>
+
+                <form class="book-hero__filters" method="get">
+                    <div class="book-hero__field book-hero__field--search">
+                        <label for="guestbook-search">
+                            {% trans "Sök" %}
+                        </label>
+
+                        <div class="book-hero__search-row">
+                            <input
+                                id="guestbook-search"
+                                type="search"
+                                name="q"
+                                value="{{ search }}"
+                                placeholder="{% trans 'Namn, rubrik eller text...' %}"
+                            >
+
+                            <label class="visually-hidden" for="guestbook-search-scope">
+                                {% trans "Sök i" %}
+                            </label>
+
+                            <select
+                                id="guestbook-search-scope"
+                                name="scope"
+                                aria-label="{% trans 'Sök i' %}"
+                            >
+                                <option
+                                    value="all"
+                                    {% if search_scope.value == "all" %}selected{% endif %}
+                                >
+                                    {% trans "Allt" %}
+                                </option>
+
+                                <option
+                                    value="title"
+                                    {% if search_scope.value == "title" %}selected{% endif %}
+                                >
+                                    {% trans "Rubrik" %}
+                                </option>
+
+                                <option
+                                    value="content"
+                                    {% if search_scope.value == "content" %}selected{% endif %}
+                                >
+                                    {% trans "Text" %}
+                                </option>
+
+                                <option
+                                    value="person"
+                                    {% if search_scope.value == "person" %}selected{% endif %}
+                                >
+                                    {% trans "Person" %}
+                                </option>
+
+                                <option
+                                    value="family"
+                                    {% if search_scope.value == "family" %}selected{% endif %}
+                                >
+                                    {% trans "Familj" %}
+                                </option>
+
+                                <option
+                                    value="event"
+                                    {% if search_scope.value == "event" %}selected{% endif %}
+                                >
+                                    {% trans "Event" %}
+                                </option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="book-hero__field book-hero__field--date">
+                        <label for="guestbook-date">
+                            {% trans "Datum" %}
+                        </label>
+
+                        <input
+                            id="guestbook-date"
+                            type="date"
+                            name="date"
+                            value="{{ date_value }}"
+                        >
+                    </div>
+
+                    {% if event %}
+                        <input
+                            type="hidden"
+                            name="event"
+                            value="{{ event.slug }}"
+                        >
+                    {% endif %}
+
+                    <button class="button button--primary book-hero__submit" type="submit">
                         {% trans "Sök" %}
-                    </label>
-
-                    <input
-                        id="guestbook-search"
-                        type="search"
-                        name="q"
-                        value="{{ query }}"
-                        placeholder="{% trans 'Namn, rubrik eller text...' %}"
-                    >
-                </div>
-
-                <div class="book-hero__field book-hero__field--date">
-                    <label for="guestbook-date">
-                        {% trans "Datum" %}
-                    </label>
-
-                    <input
-                        id="guestbook-date"
-                        type="date"
-                        name="date"
-                        value="{{ date_value }}"
-                    >
-                </div>
-
-                <button class="button button--primary book-hero__submit" type="submit">
-                    {% trans "Sök" %}
-                </button>
-            </form>
+                    </button>
+                </form>
+            </details>
 
             {% if has_filters %}
                 <a class="book-hero__clear" href="{% url 'guestbook:index' %}">
@@ -125,6 +200,14 @@
                 <div class="entry-card__body">
                     <div class="entry-card__main">
                         <div class="entry-card__meta">
+                            {% if entry.event %}
+                                <p class="entry-card__event">
+                                    <a href="{% url 'guestbook:index' %}?event={{ entry.event.slug }}">
+                                        {{ entry.event.name }}
+                                    </a>
+                                </p>
+                            {% endif %}
+
                             {% if entry.family %}
                                 <p class="entry-card__family">
                                     {{ entry.family.name }}
@@ -259,7 +342,7 @@
             data-gallery-prev
             aria-label="{% trans 'Föregående bild' %}"
         >
-        <span aria-hidden="true">‹</span>
+            <span aria-hidden="true">‹</span>
         </button>
 
         <figure class="gallery-lightbox__figure">
@@ -276,7 +359,7 @@
             data-gallery-next
             aria-label="{% trans 'Nästa bild' %}"
         >
-        <span aria-hidden="true">›</span>
+            <span aria-hidden="true">›</span>
         </button>
 
         <p class="gallery-lightbox__count" data-gallery-count></p>

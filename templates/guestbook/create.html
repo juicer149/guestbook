@@ -40,6 +40,14 @@
                 </p>
             {% endif %}
 
+            {% if active_event %}
+                <p class="write-card__event-note">
+                    {% blocktrans with event_name=active_event.name %}
+                        Inlägget kopplas till {{ event_name }}.
+                    {% endblocktrans %}
+                </p>
+            {% endif %}
+
             <div class="write-card__divider"></div>
         </section>
 
