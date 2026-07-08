@@ -1148,13 +1148,14 @@ body:not(.home-page) img {
     font-size: 0.72rem;
     font-weight: 800;
     line-height: 1.2;
-    letter-spacing: 0.04em;
+    letter-spacing: 0.03em;
     text-decoration: none;
 }
 
 .entry-card__event a:hover,
 .entry-card__event a:focus-visible {
     background: rgba(123, 24, 24, 0.13);
+    text-decoration: underline;
     outline: var(--focus-red-soft);
     outline-offset: 2px;
 }

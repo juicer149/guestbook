@@ -70,3 +70,7 @@ class EventAdmin(admin.ModelAdmin):
         "slug",
         "description",
     ]
+
+    prepopulated_fields = {
+        "slug": ("name",),
+    }
