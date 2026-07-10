@@ -1,14 +1,16 @@
-from datetime import timedelta
+from __future__ import annotations
 
+from django.http import HttpRequest, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
-from django.utils import timezone
 from django.utils.dateparse import parse_date
 
 from accounts.models import Family
-from accounts.services import get_or_create_profile_for_user
 
-from .forms import EntryCreateForm
-from .models import Entry, Event
+from .forms import (
+    AuthenticatedEntryCreateForm,
+    GuestEntryCreateForm,
+)
+from .models import Event
 from .selectors import (
     EntrySearchScope,
     current_active_event,
@@ -16,20 +18,43 @@ from .selectors import (
     normalize_search_scope,
     visible_entries_for_user,
 )
-from .services import create_entry
+from .services import (
+    create_authenticated_entry,
+    create_guest_entry,
+)
 
 
 # TODO: Paginate entries when the guestbook grows.
-def index(request):
+def index(request: HttpRequest) -> HttpResponse:
     search = request.GET.get("q", "").strip()
-    search_scope = request.GET.get("scope", EntrySearchScope.ALL)
+
+    search_scope = normalize_search_scope(
+        request.GET.get(
+            "scope",
+            EntrySearchScope.ALL,
+        )
+    )
+
     date_value = request.GET.get("date", "").strip()
     event_slug = request.GET.get("event", "").strip()
 
-    selected_date = parse_date(date_value) if date_value else None
-    event = get_object_or_404(Event, slug=event_slug) if event_slug else None
+    selected_date = (
+        parse_date(date_value)
+        if date_value
+        else None
+    )
+
+    event = (
+        get_object_or_404(
+            Event,
+            slug=event_slug,
+        )
+        if event_slug
+        else None
+    )
 
     entries = visible_entries_for_user(request.user)
+
     entries = filter_entries(
         entries,
         search=search,
@@ -38,7 +63,11 @@ def index(request):
         event=event,
     )
 
-    has_filters = bool(search or selected_date or event)
+    has_filters = bool(
+        search
+        or selected_date
+        or event
+    )
 
     return render(
         request,
@@ -56,9 +85,20 @@ def index(request):
     )
 
 
-def family_entries(request, slug):
-    family = get_object_or_404(Family, slug=slug)
-    entries = visible_entries_for_user(request.user).filter(family=family)
+def family_entries(
+    request: HttpRequest,
+    slug: str,
+) -> HttpResponse:
+    family = get_object_or_404(
+        Family,
+        slug=slug,
+    )
+
+    entries = visible_entries_for_user(
+        request.user
+    ).filter(
+        family=family,
+    )
 
     return render(
         request,
@@ -70,55 +110,49 @@ def family_entries(request, slug):
     )
 
 
-def create(request):
-    user_is_authenticated = request.user.is_authenticated
+def create(request: HttpRequest) -> HttpResponse:
+    is_authenticated = request.user.is_authenticated
     active_event = current_active_event()
 
-    form_kwargs = {
-        "show_guest_name": not user_is_authenticated,
-        "show_visibility": user_is_authenticated,
-        "use_stay_length": not user_is_authenticated,
-    }
+    form_class = (
+        AuthenticatedEntryCreateForm
+        if is_authenticated
+        else GuestEntryCreateForm
+    )
 
     if request.method == "POST":
-        form = EntryCreateForm(
+        form = form_class(
             request.POST,
             request.FILES,
-            **form_kwargs,
         )
+    else:
+        form = form_class()
 
-        if form.is_valid():
-            profile = None
-            guest_name = ""
-            visibility = Entry.Visibility.PUBLIC
+    if request.method == "POST" and form.is_valid():
+        data = form.cleaned_data
 
-            if user_is_authenticated:
-                profile = get_or_create_profile_for_user(request.user)
-                visibility = form.cleaned_data["visibility"]
-                start_date = form.cleaned_data["start_date"]
-                end_date = form.cleaned_data["end_date"]
-            else:
-                guest_name = form.cleaned_data["guest_name"]
-
-                stay_length_days = form.cleaned_data["stay_length_days"]
-                end_date = timezone.localdate()
-                start_date = end_date - timedelta(days=stay_length_days - 1)
-
-            create_entry(
-                profile=profile,
-                guest_name=guest_name,
-                title=form.cleaned_data["title"],
-                content=form.cleaned_data["content"],
-                start_date=start_date,
-                end_date=end_date,
-                visibility=visibility,
+        if is_authenticated:
+            create_authenticated_entry(
+                user=request.user,
+                title=data["title"],
+                content=data["content"],
+                start_date=data["start_date"],
+                end_date=data["end_date"],
+                visibility=data["visibility"],
                 event=active_event,
-                images=form.cleaned_data["images"],
+                images=data["images"],
+            )
+        else:
+            create_guest_entry(
+                guest_name=data["guest_name"],
+                title=data["title"],
+                content=data["content"],
+                stay_length_days=data["stay_length_days"],
+                event=active_event,
+                images=data["images"],
             )
 
-            return redirect("guestbook:index")
-    else:
-        form = EntryCreateForm(**form_kwargs)
+        return redirect("guestbook:index")
 
     return render(
         request,

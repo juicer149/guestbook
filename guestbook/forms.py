@@ -1,53 +1,94 @@
+from __future__ import annotations
+
+from typing import Any
+
 from django import forms
+from django.core.files.uploadedfile import UploadedFile
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
 from .models import Entry
+from .rules import (
+    MAX_GUEST_STAY_LENGTH_DAYS,
+    guest_stay_lengths,
+    is_valid_guest_stay_length,
+)
 
 
 class MultipleFileInput(forms.ClearableFileInput):
     allow_multiple_selected = True
 
+    def __init__(
+        self,
+        attrs: dict[str, Any] | None = None,
+    ) -> None:
+        default_attrs = {
+            "accept": "image/*",
+        }
 
-class MultipleImageField(forms.FileField):
+        super().__init__(
+            {
+                **default_attrs,
+                **(attrs or {}),
+            }
+        )
+
+
+class MultipleImageField(forms.ImageField):
     widget = MultipleFileInput
 
-    def clean(self, data, initial=None):
+    def clean(
+        self,
+        data: Any,
+        initial: Any = None,
+    ) -> list[UploadedFile]:
         if not data:
             return []
 
-        files = data if isinstance(data, (list, tuple)) else [data]
-        return [super(MultipleImageField, self).clean(file, initial) for file in files]
+        images = data if isinstance(data, (list, tuple)) else [data]
+
+        # Bind the parent method outside the comprehension. Comprehensions
+        # have their own execution scope, which makes zero-argument super()
+        # fragile inside them.
+        clean_image = super().clean
+
+        return [
+            clean_image(image, initial)
+            for image in images
+        ]
 
 
 def stay_length_choices() -> list[tuple[int, str]]:
-    choices = [(1, _("Idag"))]
+    choices: list[tuple[int, str]] = []
 
-    for days in range(2, 15):
-        choices.append((days, _("%(days)s dagar") % {"days": days}))
+    for days in guest_stay_lengths():
+        if days == 1:
+            label = _("Idag")
+        else:
+            label = _("%(days)s dagar") % {
+                "days": days,
+            }
+
+        choices.append((days, label))
 
     return choices
 
 
-class EntryCreateForm(forms.Form):
-    guest_name = forms.CharField(
-        label=_("Ditt namn"),
-        max_length=120,
-        required=False,
-        widget=forms.TextInput(
-            attrs={
-                "placeholder": _("T.ex. Anna Larsson"),
-            }
-        ),
-    )
+class BaseEntryCreateForm(forms.Form):
+    """
+    Shared input fields for all guestbook-entry creation flows.
+
+    This form is intended for inheritance, not direct use.
+    """
 
     title = forms.CharField(
         label=_("Rubrik"),
         max_length=160,
-        required=True,
         widget=forms.TextInput(
             attrs={
-                "placeholder": _("T.ex. Första grillningen på nya grillen"),
+                "placeholder": _(
+                    "T.ex. Första grillningen på nya grillen"
+                ),
             }
         ),
     )
@@ -58,37 +99,11 @@ class EntryCreateForm(forms.Form):
         widget=forms.Textarea(
             attrs={
                 "placeholder": _(
-                    "Skriv några rader om besöket, vad som hände och vilka som var med..."
+                    "Skriv några rader om besöket, vad som hände "
+                    "och vilka som var med..."
                 ),
             }
         ),
-    )
-
-    stay_length_days = forms.ChoiceField(
-        label=_("Besöket gäller"),
-        choices=stay_length_choices,
-        initial=1,
-        required=True,
-    )
-
-    start_date = forms.DateField(
-        label=_("Från"),
-        initial=timezone.localdate,
-        widget=forms.DateInput(attrs={"type": "date"}),
-    )
-
-    end_date = forms.DateField(
-        label=_("Till"),
-        initial=timezone.localdate,
-        widget=forms.DateInput(attrs={"type": "date"}),
-    )
-
-    visibility = forms.ChoiceField(
-        label=_("Synlighet"),
-        choices=Entry.Visibility.choices,
-        initial=Entry.Visibility.PUBLIC,
-        required=True,
-        widget=forms.RadioSelect,
     )
 
     images = MultipleImageField(
@@ -96,67 +111,140 @@ class EntryCreateForm(forms.Form):
         required=False,
     )
 
-    def __init__(
-        self,
-        *args,
-        show_guest_name: bool = True,
-        show_visibility: bool = False,
-        use_stay_length: bool = True,
-        **kwargs,
-    ):
-        super().__init__(*args, **kwargs)
 
-        self.use_stay_length = use_stay_length
+class GuestEntryCreateForm(BaseEntryCreateForm):
+    """Input contract for unauthenticated guest entries."""
 
-        today = timezone.localdate()
+    field_order = [
+        "guest_name",
+        "title",
+        "content",
+        "stay_length_days",
+        "images",
+    ]
 
-        self.fields["start_date"].widget.attrs["max"] = today.isoformat()
-        self.fields["end_date"].widget.attrs["max"] = today.isoformat()
+    guest_name = forms.CharField(
+        label=_("Ditt namn"),
+        max_length=120,
+        widget=forms.TextInput(
+            attrs={
+                "placeholder": _("T.ex. Anna Larsson"),
+            }
+        ),
+    )
 
-        if not show_guest_name:
-            self.fields.pop("guest_name")
+    stay_length_days = forms.TypedChoiceField(
+        label=_("Besöket gäller"),
+        choices=stay_length_choices,
+        initial=1,
+        coerce=int,
+    )
 
-        if not show_visibility:
-            self.fields.pop("visibility")
+    def clean_guest_name(self) -> str:
+        guest_name = self.cleaned_data["guest_name"].strip()
 
-        if use_stay_length:
-            self.fields.pop("start_date")
-            self.fields.pop("end_date")
-        else:
-            self.fields.pop("stay_length_days")
-
-    def clean_guest_name(self):
-        guest_name = self.cleaned_data.get("guest_name", "").strip()
-
-        if "guest_name" in self.fields and not guest_name:
-            raise forms.ValidationError(_("Skriv ditt namn."))
+        if not guest_name:
+            raise forms.ValidationError(
+                _("Skriv ditt namn.")
+            )
 
         return guest_name
 
-    def clean_stay_length_days(self):
-        days = int(self.cleaned_data["stay_length_days"])
+    def clean_stay_length_days(self) -> int:
+        days = self.cleaned_data["stay_length_days"]
 
-        if days < 1 or days > 14:
+        if not is_valid_guest_stay_length(days):
             raise forms.ValidationError(
-                _("Anonyma inlägg kan bara gälla de senaste 14 dagarna.")
+                _(
+                    "Anonyma inlägg kan bara gälla "
+                    "de senaste %(days)s dagarna."
+                )
+                % {
+                    "days": MAX_GUEST_STAY_LENGTH_DAYS,
+                }
             )
 
         return days
 
-    def clean(self):
+
+class AuthenticatedEntryCreateForm(BaseEntryCreateForm):
+    """Input contract for authenticated guestbook entries."""
+
+    field_order = [
+        "title",
+        "content",
+        "start_date",
+        "end_date",
+        "visibility",
+        "images",
+    ]
+
+    start_date = forms.DateField(
+        label=_("Från"),
+        initial=timezone.localdate,
+        widget=forms.DateInput(
+            attrs={
+                "type": "date",
+            }
+        ),
+    )
+
+    end_date = forms.DateField(
+        label=_("Till"),
+        initial=timezone.localdate,
+        widget=forms.DateInput(
+            attrs={
+                "type": "date",
+            }
+        ),
+    )
+
+    visibility = forms.ChoiceField(
+        label=_("Synlighet"),
+        choices=Entry.Visibility.choices,
+        initial=Entry.Visibility.PUBLIC,
+        widget=forms.RadioSelect,
+    )
+
+    def __init__(
+        self,
+        *args: Any,
+        **kwargs: Any,
+    ) -> None:
+        super().__init__(*args, **kwargs)
+
+        maximum_date = timezone.localdate().isoformat()
+
+        self.fields["start_date"].widget.attrs["max"] = maximum_date
+        self.fields["end_date"].widget.attrs["max"] = maximum_date
+
+    def clean(self) -> dict[str, Any]:
         cleaned_data = super().clean()
 
         start_date = cleaned_data.get("start_date")
         end_date = cleaned_data.get("end_date")
         today = timezone.localdate()
 
-        if start_date and start_date > today:
-            self.add_error("start_date", _("Startdatum kan inte vara i framtiden."))
+        if start_date is not None and start_date > today:
+            self.add_error(
+                "start_date",
+                _("Startdatum kan inte vara i framtiden."),
+            )
 
-        if end_date and end_date > today:
-            self.add_error("end_date", _("Slutdatum kan inte vara i framtiden."))
+        if end_date is not None and end_date > today:
+            self.add_error(
+                "end_date",
+                _("Slutdatum kan inte vara i framtiden."),
+            )
 
-        if start_date and end_date and end_date < start_date:
-            self.add_error("end_date", _("Slutdatum kan inte vara före startdatum."))
+        if (
+            start_date is not None
+            and end_date is not None
+            and end_date < start_date
+        ):
+            self.add_error(
+                "end_date",
+                _("Slutdatum kan inte vara före startdatum."),
+            )
 
         return cleaned_data
