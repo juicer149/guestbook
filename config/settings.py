@@ -18,14 +18,17 @@ ALLOWED_HOSTS = [
     "192.168.68.168",
     "rp58",
     "rp58.local",
+    "gastbok",
+    "gastbok.local",
 ]
 
 CSRF_TRUSTED_ORIGINS = [
     "http://192.168.68.168",
     "http://rp58",
     "http://rp58.local",
+    "http://gastbok",
+    "http://gastbok.local",
 ]
-
 
 # ---------------------------------------------------------------------
 # Application definition
