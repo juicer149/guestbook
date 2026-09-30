@@ -7,6 +7,12 @@ Visitors write about their stay and add photos. Family members log in to
 write longer entries, choose who can see them, and browse the house's
 history by family, event or date.
 
+<p>
+  <img src="docs/screenshots/home.png" alt="Start page" width="260">
+  <img src="docs/screenshots/feed.png" alt="Guestbook feed" width="260">
+  <img src="docs/screenshots/create.png" alt="New entry form" width="260">
+</p>
+
 ## Features
 
 - **Guest entries** without an account: name, story, photos and how many
