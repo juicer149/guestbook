@@ -5,6 +5,24 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 
 # ---------------------------------------------------------------------
+# Environment helpers
+# ---------------------------------------------------------------------
+
+
+def env_list(name: str, default: list[str]) -> list[str]:
+    value = os.environ.get(name)
+
+    if value is None:
+        return default
+
+    return [
+        item.strip()
+        for item in value.split(",")
+        if item.strip()
+    ]
+
+
+# ---------------------------------------------------------------------
 # Security / runtime
 # ---------------------------------------------------------------------
 
@@ -12,23 +30,17 @@ SECRET_KEY = os.environ["DJANGO_SECRET_KEY"]
 
 DEBUG = os.environ.get("DJANGO_DEBUG", "False") == "True"
 
-ALLOWED_HOSTS = [
-    "localhost",
-    "127.0.0.1",
-    "192.168.68.168",
-    "rp58",
-    "rp58.local",
-    "gastbok",
-    "gastbok.local",
-]
+# Production values are set in /etc/gastbok/gastbok.env on the Pi.
+ALLOWED_HOSTS = env_list(
+    "DJANGO_ALLOWED_HOSTS",
+    ["localhost", "127.0.0.1"],
+)
 
-CSRF_TRUSTED_ORIGINS = [
-    "http://192.168.68.168",
-    "http://rp58",
-    "http://rp58.local",
-    "http://gastbok",
-    "http://gastbok.local",
-]
+CSRF_TRUSTED_ORIGINS = env_list(
+    "DJANGO_CSRF_TRUSTED_ORIGINS",
+    [],
+)
+
 
 # ---------------------------------------------------------------------
 # Application definition
